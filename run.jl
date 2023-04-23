@@ -52,7 +52,7 @@ function getweights(runner::Runner, model::ABM)
     
     waterpoint = getproperty(model, :waterpoint)
     if 0 < waterpoint[2] - pos[2] <= runner.viewdist
-        laneweights[waterpoint[1]] -= 5
+        laneweights[waterpoint[1]] -= 10
     end
 
     return laneweights
@@ -85,64 +85,83 @@ function agent_step!(runner::Runner, model::ABM)
     move_agent!(runner, newpos, model)
 end
 
-# ╔═╡ 433709c8-f5f5-43e8-945a-3c05bd051ba3
-function model_step!(model::ABM)
-    dim = spacesize(model)
-    for i in 1:sum(bitrand(2dim[1]))
-        pos = (rand(1:dim[1]), 1)
-        exhaustion = min(max(0.5randn() + 0.5, 0), 1)
-        pace = sum(bitrand(5)) + 1
-        viewdist = 10
-
-        add_agent!(pos, model, exhaustion, pace, viewdist)
-    end
-end
-
 # ╔═╡ 33e04962-bf65-4159-8a4b-b14891905d17
 md"""
 ### Running the simulation
 """
+
+# ╔═╡ a257809c-f4e9-41e2-b419-12284efc4d37
+function initialiseagent(model)
+	pos = (rand(1:spacesize(model)[1]), 1)
+	exhaustion = min(max(0.5randn() + 0.5, 0), 1)
+	pace = sum(bitrand(5)) + 1
+	viewdist = 40
+	
+	add_agent!(pos, model, exhaustion, pace, viewdist)
+end
+
+# ╔═╡ 433709c8-f5f5-43e8-945a-3c05bd051ba3
+function model_step!(model::ABM)
+    dim = spacesize(model)
+    for i in 1:sum(bitrand(2dim[1]))
+        initialiseagent(model)
+    end
+end
 
 # ╔═╡ ac4eb823-8132-4cf5-a6ad-6745ace5a84a
 function racemodel()
     dimensions = (10, 100)
     road = GridSpace(dimensions; metric=:manhattan)
 
-    properties = Dict(:waterpoint => (dimensions[1], dimensions[2] / 2))
+    properties = Dict(:waterpoint => (dimensions[1], cld(dimensions[2], 2)))
     model = ABM(Runner, road; properties)
 
     for i in 1:sum(bitrand(2dimensions[1]))
-        pos = (rand(1:dimensions[1]), 1)
-        exhaustion = min(max(0.5randn() + 0.5, 0), 1)
-        pace = sum(bitrand(5)) + 1
-        viewdist = 10
-
-        add_agent!(pos, model, exhaustion, pace, viewdist)
+        initialiseagent(model)
     end
 
     return model
 end
 
-# ╔═╡ e94c74e4-6bd7-4203-8814-699afd122c63
-model = racemodel()
-
 # ╔═╡ fff9f08e-b66a-44f1-b5f3-93e57d34ee0f
 md"""
 ### Visualisation
+Heatmap of the runners. The white spot denotes the waterpoint.
 """
 
 # ╔═╡ cff46880-0975-4745-afbc-5cfb27bd76b3
+@bind t Clock(0.5, true)
+
+# ╔═╡ 54959086-27b8-484e-8957-5c5d8f9b7a49
 @bind click Button("Step")
+
+# ╔═╡ be11c362-446c-4d22-a67b-7aa3ccb2a23f
+@bind reset Button("Reset")
+
+# ╔═╡ e94c74e4-6bd7-4203-8814-699afd122c63
+begin
+	reset
+	model = racemodel()
+end
 
 # ╔═╡ 609cdbe5-ba80-447b-a161-783ffd7cc32d
 begin
-	click
+	click, t
 
-	step!(model, agent_step!, 1)
+	step!(model, agent_step!, model_step!, 1)
 
 	agentcounts = map(p -> length(ids_in_position(p, model)), positions(model))
-    heatmap(agentcounts, aspect_ratio = :equal)
+	waterpoint = getproperty(model, :waterpoint)
+	agentcounts[waterpoint...] = 10
+
+    heatmap(agentcounts, aspect_ratio = :equal,
+		c = cgrad([:black, :green, :orange, :red, :white], [0.05, 0.95]))
 end
+
+# ╔═╡ 149b5679-c11b-4392-aac3-a9b779ef5253
+md"""
+Interestingly, I have yet to observe a significant queue form before the waterpoint even after adjusting to give it more weightage and view distance. Adding exhaustion to the visualisation would likely give some insight to this.
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1446,20 +1465,24 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═3323fbcb-e551-4de1-82b0-d27457670a4e
+# ╟─3323fbcb-e551-4de1-82b0-d27457670a4e
 # ╠═48127f31-dd5e-49c3-b824-386b4350f097
 # ╠═8b4d7a7f-a255-455f-9337-d6725c85ceed
-# ╠═5fcf8ac9-2e3b-4fa2-b5cb-2224681232ff
+# ╟─5fcf8ac9-2e3b-4fa2-b5cb-2224681232ff
 # ╠═79fad249-2633-4fc3-80f2-643e4bc11c64
-# ╠═fc258b97-c46e-4359-a5da-8eaed77bc005
+# ╟─fc258b97-c46e-4359-a5da-8eaed77bc005
 # ╠═fff8819c-ccb6-4c3a-a8d8-ad143712159b
 # ╠═433709c8-f5f5-43e8-945a-3c05bd051ba3
-# ╠═33e04962-bf65-4159-8a4b-b14891905d17
+# ╟─33e04962-bf65-4159-8a4b-b14891905d17
+# ╠═a257809c-f4e9-41e2-b419-12284efc4d37
 # ╠═ac4eb823-8132-4cf5-a6ad-6745ace5a84a
 # ╠═e94c74e4-6bd7-4203-8814-699afd122c63
-# ╠═fff9f08e-b66a-44f1-b5f3-93e57d34ee0f
+# ╟─fff9f08e-b66a-44f1-b5f3-93e57d34ee0f
 # ╠═60798bed-fc01-4c07-8dca-907c1e8aa9ec
-# ╠═cff46880-0975-4745-afbc-5cfb27bd76b3
+# ╟─cff46880-0975-4745-afbc-5cfb27bd76b3
+# ╟─54959086-27b8-484e-8957-5c5d8f9b7a49
+# ╟─be11c362-446c-4d22-a67b-7aa3ccb2a23f
 # ╠═609cdbe5-ba80-447b-a161-783ffd7cc32d
+# ╟─149b5679-c11b-4392-aac3-a9b779ef5253
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
