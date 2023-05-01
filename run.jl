@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.24
+# v0.19.25
 
 using Markdown
 using InteractiveUtils
@@ -67,6 +67,11 @@ should we allow runners to move directly to their preferred lane in a single ste
 function agent_step!(runner::Runner, model::ABM)
     dim = spacesize(model)
     lane, = runner.pos
+
+	if runner.pos == getproperty(model, :waterpoint)
+		runner.exhaustion *= 0.1
+	end
+
     laneweights = getweights(runner, model)
     optlane = all(p -> p == laneweights[1], laneweights) ? lane : argmin(laneweights)
 
@@ -83,6 +88,7 @@ function agent_step!(runner::Runner, model::ABM)
     end
 
     move_agent!(runner, newpos, model)
+	runner.exhaustion += 0.01
 end
 
 # ╔═╡ 33e04962-bf65-4159-8a4b-b14891905d17
@@ -183,7 +189,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "71cc8e7c9cffb28f89920d0a5e435917e0946f44"
+project_hash = "83205728029da8c0136221b1ae812455e4003375"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
