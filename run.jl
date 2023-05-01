@@ -32,13 +32,13 @@ md"""
     viewdist::Int
 end
 
-# ╔═╡ 5fcf8ac9-2e3b-4fa2-b5cb-2224681232ff
+# ╔═╡ daade3ec-3844-4266-9cf4-9721aee6125e
 md"""
 ### Step evolution logic
-how many lanes ahead should runners be able to see when evaluating weights for each lane?
 """
 
 # ╔═╡ 79fad249-2633-4fc3-80f2-643e4bc11c64
+"Generate lane weights for runner agents."
 function getweights(runner::Runner, model::ABM)
     dim = spacesize(model)
     pos = runner.pos
@@ -58,11 +58,6 @@ function getweights(runner::Runner, model::ABM)
     return laneweights
 end
 
-# ╔═╡ fc258b97-c46e-4359-a5da-8eaed77bc005
-md"""
-should we allow runners to move directly to their preferred lane in a single step? (possibly more realistic agility when taking into account that the simulation space is discrete) or make them move one lane at a time? (possibly higher performance, more continuous(?) simulation)
-"""
-
 # ╔═╡ fff8819c-ccb6-4c3a-a8d8-ad143712159b
 function agent_step!(runner::Runner, model::ABM)
     dim = spacesize(model)
@@ -75,11 +70,11 @@ function agent_step!(runner::Runner, model::ABM)
     laneweights = getweights(runner, model)
     optlane = all(p -> p == laneweights[1], laneweights) ? lane : argmin(laneweights)
 
-    # the debate: jump to or step towards new lane
-    lanedist = optlane-lane
-    #delta = (lanedist,
-    #    lanedist == 0 ? runner.pace : min(floor(Int, runner.pace/abs(lanedist)), 1))
-    delta = (sign(lanedist), runner.pace)
+	# Pythagorean theorem-ish for horizontal/vertical displacement
+    lanedist = min(abs(optlane-lane), runner.pace - 1)
+	fwddist = floor(Int, √(runner.pace^2 - lanedist^2))
+
+    delta = (lanedist * sign(optlane-lane), fwddist)
 
     newpos = runner.pos .+ delta
     if newpos[2] > dim[2]
@@ -166,7 +161,9 @@ end
 
 # ╔═╡ 149b5679-c11b-4392-aac3-a9b779ef5253
 md"""
-Interestingly, I have yet to observe a significant queue form before the waterpoint even after adjusting to give it more weightage and view distance. Adding exhaustion to the visualisation would likely give some insight to this.
+A clear line can be seen forming on the left lane before the water point. However, there is no consistent gap between the water lane and those on its right, which is likely to be seen in reality. Should the proximity of the runner to the water point affect its weightage?
+
+A better visualisation that allows us to see the exhaustion and movement of individual runners would likely give more insight.
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1474,9 +1471,8 @@ version = "1.4.1+0"
 # ╟─3323fbcb-e551-4de1-82b0-d27457670a4e
 # ╠═48127f31-dd5e-49c3-b824-386b4350f097
 # ╠═8b4d7a7f-a255-455f-9337-d6725c85ceed
-# ╟─5fcf8ac9-2e3b-4fa2-b5cb-2224681232ff
+# ╟─daade3ec-3844-4266-9cf4-9721aee6125e
 # ╠═79fad249-2633-4fc3-80f2-643e4bc11c64
-# ╟─fc258b97-c46e-4359-a5da-8eaed77bc005
 # ╠═fff8819c-ccb6-4c3a-a8d8-ad143712159b
 # ╠═433709c8-f5f5-43e8-945a-3c05bd051ba3
 # ╟─33e04962-bf65-4159-8a4b-b14891905d17
